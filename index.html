@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="assets/style/main.css">
+  <title>WasmIRC++</title>
+</head>
+
+<body>
+
+  <div id="form-open-web-socket" class>
+
+  </div>
+
+  <div id="form-register-user" class="window visible">
+    <div class="column">
+      <div class="row">
+        <label for="input-url">URL</label>
+        <input id="input-url" type="text" value="ws://191.101.71.222">
+      </div>
+      <div class="row">
+        <label for="input-port">Port</label>
+        <input id="input-port" type="text" value="7002">
+      </div>
+      <div class="row">
+        <label for="input-chan">Channel</label>
+        <input id="input-chan" type="text" value="#teste">
+      </div>
+      <div class="row">
+        <label for="input-chan-key">Channel key</label>
+        <input id="input-chan-key" type="text" value="">
+      </div>
+    </div>
+    <div class="column">
+      <div class="row">
+        <label for="input-user">Username</label>
+        <input id="input-user" type="text" value="johndoe">
+      </div>
+      <div class="row">
+        <label for="input-host">Hostname</label>
+        <input id="input-host" type="text" value="somehostname">
+      </div>
+      <div class="row">
+        <label for="input-server">Servername</label>
+        <input id="input-server" type="text" value="someservername">
+      </div>
+      <div class="row">
+        <label for="input-name">Real name</label>
+        <input id="input-name" type="text" value="John Doe">
+      </div>
+      <div class="row">
+        <label for="input-nick">Nickname</label>
+        <input id="input-nick" type="text" value="JohnDoe">
+      </div>
+      <div class="row">
+        <label for="input-color">Color</label>
+        <input id="input-color" type="color">
+      </div>
+    </div>
+    <div class="column">
+      <button id="btn-register" type="button">register</button>
+    </div>
+  </div>
+
+  <div id="form-send-msg" class="window">
+    <div class="column">
+      <div class="row chan"></div>
+      <div class="row">
+        <div class="messages"></div>
+      </div>
+      <div class="row">
+        <input id="input-msg" type="text">
+        <button id="btn-send" type="button">send</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+<script src="./wasm/ircppwasm.js">/*IMPORT*/</script>
+<script>
+  var irc;
+  var module;
+
+  async function init() {
+    module = await Module();
+    irc = new module.ircController();
+    return module;
+  }
+  const m = init();
+</script>
+<script src="assets/script/jquery-3.5.1.min.js"></script>
+<script src="assets/script/main.js" type="module"></script>
+
+</html>
