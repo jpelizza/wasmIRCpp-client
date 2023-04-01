@@ -51,7 +51,7 @@ void ircController::setDebug(bool _debug) {
 void ircController::categorizeMsg(std::string msg) {
     message m(msg, debug);
     // if command is ping, sends pong back
-    if (m.command == "PING") pong(m.trailing);
+    if (m.command == "PING") pong("", m.trailing);
 
     /* If categorize flag is up, all messages will be save on messages list*/
     // if (!categorize) messages.push_back(m);
@@ -71,9 +71,11 @@ void ircController::categorizeMsg(std::string msg) {
  *
  * @param daemon server
  */
-void ircController::pong(std::string daemon) {
-    std::string msg = "PONG " + daemon;
+bool ircController::pong(std::string cookie, std::string server) {
+    if (cookie == "") return false;
+    std::string msg = (server == "") ? "PONG " + cookie : "PONG " + cookie + " " + server;
     sendMessage(msg);
+    return true;
 }
 
 /**
@@ -110,7 +112,7 @@ void ircController::registerUser(std::string username, std::string hostname, std
  *
  * @param text
  */
-void ircController::privmsg(std::string text) {
+bool ircController::privmsg(std::string text) {
     std::string msg = "PRIVMSG ";
     for (auto it = channels.begin(); it != channels.end(); it++) {
         if (it != channels.begin()) msg += ",";
@@ -118,6 +120,7 @@ void ircController::privmsg(std::string text) {
     }
     msg += " :" + text;
     sendMessage(msg);
+    return true;
 }
 
 /**
@@ -154,9 +157,10 @@ std::string ircController::getNextInfoMessage() {
  *
  * @param server server to request list of admins for
  */
-void ircController::admin(std::string server) {
+bool ircController::admin(std::string server) {
     server = (server != "") ? "ADMIN " + server : "ADMIN";
     sendMessage(server);
+    return true;
 }
 
 /**
@@ -165,17 +169,19 @@ void ircController::admin(std::string server) {
  * @param away_msg message to set reason for being away
  * @example away("Washing my hair");
  */
-void ircController::away(std::string away_msg) {
+bool ircController::away(std::string away_msg) {
     away_msg = (away_msg != "") ? "AWAY :" + away_msg : "AWAY";
     sendMessage(away_msg);
+    return true;
 }
 
 /**
  * @brief Lists all commands that exist on the local server.
  *
  */
-void ircController::commands() {
+bool ircController::commands() {
     sendMessage("COMMANDS");
+    return true;
 }
 
 /**
@@ -236,8 +242,9 @@ bool ircController::gline(std::vector<std::string> userAThost, std::string durat
  * @brief Requests information on the developers and supporters who made the creation and continued development of this IRC server possible.
  *
  */
-void ircController::info() {
+bool ircController::info() {
     sendMessage("INFO");
+    return true;
 }
 
 /**
@@ -469,8 +476,9 @@ bool ircController::mode(std::string target, std::string modes, std::vector<std:
 /**
  * @brief Lists all modules which are loaded on the local server.
  */
-void ircController::modules() {
+bool ircController::modules() {
     sendMessage("MODULES");
+    return true;
 }
 
 /**
@@ -479,9 +487,46 @@ void ircController::modules() {
  *
  * @param server
  */
-void ircController::motd(std::string server) {
+bool ircController::motd(std::string server) {
     std::string msg = (server == "") ? "MOTD" : "MOTD " + server;
     sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief disconnects from server with given message as reason
+ *
+ * @param msg
+ */
+bool ircController::quit(std::string msg) {
+    msg = (msg != "") ? "QUIT :" + msg : "QUIT";
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Requests information about the current and total number of servers, server operators, and users.
+ *
+ */
+bool ircController::lusers() {
+    sendMessage("LUSERS");
+    return true;
+}
+
+/**
+ * @brief asks server for list of nicknames on given channel array
+ *
+ * @param chans
+ */
+bool ircController::names(std::vector<std::string> chans) {
+    std::string msg = "NAMES ";
+
+    for (auto it = chans.begin(); it != chans.end(); it++) {
+        if (it != chans.begin()) msg += ",";
+        msg += (*it);
+    }
+    sendMessage(msg);
+    return true;
 }
 
 /**
@@ -498,7 +543,6 @@ bool ircController::nick(std::string nickname) {
     sendMessage(msg);
     return true;
 }
-
 /**
  * @brief Sends a notice to the targets specified in <target>.
  * These targets can be a channel, a user, or a server mask (requires the users/mass-message server operator privilege).
@@ -520,35 +564,9 @@ bool ircController::notice(std::vector<std::string> targets, std::string message
     return true;
 }
 
-/**
- * @brief asks server for list of nicknames on given channel array
- *
- * @param chans
- */
-void ircController::names(std::vector<std::string> chans) {
-    std::string msg = "NAMES ";
-
-    for (auto it = chans.begin(); it != chans.end(); it++) {
-        if (it != chans.begin()) msg += ",";
-        msg += (*it);
-    }
+bool ircController::oper(std::string name, std::string password) {
+    if (name == "" || password == "") return false;
+    std::string msg = "OPER " + name + " " + password;
     sendMessage(msg);
-}
-
-/**
- * @brief disconnects from server with given message as reason
- *
- * @param msg
- */
-void ircController::quit(std::string msg) {
-    msg = (msg != "") ? "QUIT :" + msg : "QUIT";
-    sendMessage(msg);
-}
-
-/**
- * @brief Requests information about the current and total number of servers, server operators, and users.
- *
- */
-void ircController::lusers() {
-    sendMessage("LUSERS");
+    return true;
 }
