@@ -32,7 +32,7 @@ To make use of the client, create a ircController class through importing the em
 
 ## Contributing
 
-The project is missing a couple of functionalities, when all commands are implemented, see [inspIRCd's commands](https://docs.inspircd.org/3/commands/). Then I'll update this describign how to contribute.
+The project is missing a couple of functionalities, when all commands are implemented, see [inspIRCd's commands](https://docs.inspircd.org/3/commands/). Then I'll update this describing how to contribute.
 
 ## License
 
