@@ -52,7 +52,6 @@ class ircController {
     bool commands();
     bool privmsg(std::string text);
     bool quit(std::string msg);
-    bool part(std::vector<std::string> chans, std::string reason = "");
     bool list(std::string patterns);
     bool loadModule(std::string module);
     bool lusers();
@@ -63,7 +62,7 @@ class ircController {
     bool nick(std::string nickname);
     bool notice(std::vector<std::string> targets, std::string message);
     bool oper(std::string name, std::string password);
-    // bool part(std::vector<std::string> chans, std::string reason);
+    bool part(std::vector<std::string> chans, std::string reason);
     // bool pass(std::string password);
     // bool ping(std::string cookie, std::string server);
     bool pong(std::string cookie, std::string server);

@@ -1,3 +1,5 @@
 [submodule "json"]
 	path = json
 	url = https://github.com/dropbox/json11
+
+.vscode
