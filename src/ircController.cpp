@@ -51,7 +51,7 @@ void ircController::setDebug(bool _debug) {
 void ircController::categorizeMsg(std::string msg) {
     message m(msg, debug);
     // if command is ping, sends pong back
-    if (m.command == "PING") pong("", m.trailing);
+    if (m.command == "PING") pong(m.trailing);
 
     /* If categorize flag is up, all messages will be save on messages list*/
     // if (!categorize) messages.push_back(m);
@@ -64,18 +64,6 @@ void ircController::categorizeMsg(std::string msg) {
     } else {
         std::cout << "Uncaught categorization of message" << std::endl;
     }
-}
-
-/**
- * @brief PONG to keep connection alive
- *
- * @param daemon server
- */
-bool ircController::pong(std::string cookie, std::string server) {
-    if (cookie == "") return false;
-    std::string msg = (server == "") ? "PONG " + cookie : "PONG " + cookie + " " + server;
-    sendMessage(msg);
-    return true;
 }
 
 /**
@@ -105,22 +93,6 @@ void ircController::registerUser(std::string username, std::string hostname, std
     sendMessage(msg);
     msg = "NICK " + nick;
     sendMessage(msg);
-}
-
-/**
- * @brief sends message to all connected channels
- *
- * @param text
- */
-bool ircController::privmsg(std::string text) {
-    std::string msg = "PRIVMSG ";
-    for (auto it = channels.begin(); it != channels.end(); it++) {
-        if (it != channels.begin()) msg += ",";
-        msg += (*it);
-    }
-    msg += " :" + text;
-    sendMessage(msg);
-    return true;
 }
 
 /**
@@ -157,10 +129,9 @@ std::string ircController::getNextInfoMessage() {
  *
  * @param server server to request list of admins for
  */
-bool ircController::admin(std::string server) {
+void ircController::admin(std::string server) {
     server = (server != "") ? "ADMIN " + server : "ADMIN";
     sendMessage(server);
-    return true;
 }
 
 /**
@@ -169,19 +140,17 @@ bool ircController::admin(std::string server) {
  * @param away_msg message to set reason for being away
  * @example away("Washing my hair");
  */
-bool ircController::away(std::string away_msg) {
+void ircController::away(std::string away_msg) {
     away_msg = (away_msg != "") ? "AWAY :" + away_msg : "AWAY";
     sendMessage(away_msg);
-    return true;
 }
 
 /**
  * @brief Lists all commands that exist on the local server.
  *
  */
-bool ircController::commands() {
+void ircController::commands() {
     sendMessage("COMMANDS");
-    return true;
 }
 
 /**
@@ -242,9 +211,8 @@ bool ircController::gline(std::vector<std::string> userAThost, std::string durat
  * @brief Requests information on the developers and supporters who made the creation and continued development of this IRC server possible.
  *
  */
-bool ircController::info() {
+void ircController::info() {
     sendMessage("INFO");
-    return true;
 }
 
 /**
@@ -260,7 +228,7 @@ bool ircController::info() {
  * @return false
  */
 bool ircController::invite(std::string nick, std::string chan, std::string duration) {
-    if (((nick != "" && chan == "") || (nick == "" && chan != "")) || ((nick == "" && duration != "") || (chan == "" && duration != ""))) return false;
+    if (((nick.size() && !chan.size()) || (!nick.size() && chan.size())) || ((!nick.size() && duration.size()) || (!chan.size() && duration.size()))) return false;
     std::string msg = "INVITE";
     if (nick != "") {
         msg += " " + nick + " " + chan;
@@ -327,7 +295,7 @@ bool ircController::join(std::vector<std::string> chans, std::vector<std::string
  * @return false if no channel name is provided or nicks vector is empty
  */
 bool ircController::kick(std::string chan, std::vector<std::string> nicks, std::string reason) {
-    if (chan == "" || !nicks.size()) return false;
+    if (!chan.size() || !nicks.size()) return false;
     std::string msg = "KICK " + chan + " ";
 
     for (auto it = nicks.begin(); it != nicks.end(); it++) {
@@ -389,6 +357,167 @@ bool ircController::kline(std::vector<std::string> userAThost, std::string durat
     return true;
 }
 
+/// LIST [ (>|<)<count> | C(>|<)<minutes> | T(>|<)<minutes> | [!]<pattern>]+
+/**
+ * @brief Lists all channels visible to the requesting user which match the specified criteria. If no criteria is specified then all visible channels are listed.
+ *
+ * @return true
+ * @return false
+ */
+bool ircController::list(std::string patterns) {
+    if (!patterns.size()) return false;
+
+    std::string msg = "LIST ";
+    for (auto it = patterns.begin(); it != patterns.end(); it++) {
+        if (it != patterns.begin()) msg += " ";
+        msg += (*it);
+    }
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Loads the specified module on the local server.
+ * This command is only usable by server operators with LOADMODULE in one of their <class> blocks.
+ *
+ * @param module
+ * @return true
+ * @return false
+ */
+bool ircController::loadmodule(std::string module) {
+    if (!module.size()) return false;
+    sendMessage("LOADMODULE " + module);
+    return true;
+}
+
+/**
+ * @brief Requests information about the current and total number of servers, server operators, and users.
+ *
+ */
+void ircController::lusers() {
+    sendMessage("LUSERS");
+}
+
+/**
+ * @brief Changes the modes which are set on a channel or a user.
+ * For a list of modes see the channel modes and user modes pages.
+ *
+ * @param target channel or user
+ * @param modes
+ * @param params
+ * @return true
+ * @return false
+ */
+/// MODE <channel>|<user> <modes> [<parameters>]+
+bool ircController::mode(std::string target, std::string modes, std::vector<std::string> params) {
+    if (!target.size() || !modes.size()) return false;
+
+    std::string msg = "MODE " + target + " " + modes + " ";
+    for (auto it = params.begin(); it != params.end(); it++) {
+        if (it != params.begin()) msg += " ";
+        msg += (*it);
+    }
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Lists all modules which are loaded on the local server.
+ */
+void ircController::modules() {
+    sendMessage("MODULES");
+}
+
+/**
+ * @brief If <server> is specified then requests the message of the day for the specified server.
+ * Otherwise, requests the message of the day for the local server.
+ *
+ * @param server
+ */
+void ircController::motd(std::string server) {
+    std::string msg = (!server.size()) ? "MOTD" : "MOTD " + server;
+    sendMessage(msg);
+}
+
+/**
+ * @brief asks server for list of nicknames on given channel array
+ *
+ * @param chans
+ */
+void ircController::names(std::vector<std::string> chans) {
+    std::string msg = "NAMES ";
+
+    for (auto it = chans.begin(); it != chans.end(); it++) {
+        if (it != chans.begin()) msg += ",";
+        msg += (*it);
+    }
+    sendMessage(msg);
+}
+
+/**
+ * @brief Changes your nickname to <nick>.
+ * You may also change your nick to your UUID by specifying a nickname of "0".
+ *
+ * @param nickname
+ * @return true
+ * @return false
+ */
+bool ircController::nick(std::string nickname) {
+    if (!nickname.size()) return false;
+    std::string msg = "NICK " + nickname;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Sends a notice to the targets specified in <target>.
+ * These targets can be a channel, a user, or a server mask (requires the users/mass-message server operator privilege).
+ *
+ * @param targets
+ * @param message
+ * @return true
+ * @return false
+ */
+bool ircController::notice(std::vector<std::string> targets, std::string message) {
+    if (!targets.size() || !message.size()) return false;
+    std::string msg = "NOTICE ";
+    for (auto it = targets.begin(); it != targets.end(); it++) {
+        if (it != targets.begin()) msg += ",";
+        msg += (*it);
+    }
+    msg += " " + message;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Logs into a server operator account with the specified name and password.
+ *
+ * @param name
+ * @param pass
+ * @return true
+ * @return false
+ */
+bool ircController::oper(std::string name, std::string pass) {
+    if (!name.size() || !pass.size()) return false;
+    std::string msg = "OPER " + name + " " + pass;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Specifies the password used to log in to the local server.
+ *
+ * @param pass
+ * @return true
+ * @return false
+ */
+bool ircController::pass(std::string pass) {
+    if (!pass.size()) return false;
+    sendMessage("PASS " + pass);
+    return true;
+}
+
 /**
  * @brief parts channels array
  *
@@ -417,79 +546,71 @@ bool ircController::part(std::vector<std::string> chans, std::string reason) {
     sendMessage(msg);
     return true;
 }
-/// LIST [ (>|<)<count> | C(>|<)<minutes> | T(>|<)<minutes> | [!]<pattern>]+
+
 /**
- * @brief Lists all channels visible to the requesting user which match the specified criteria. If no criteria is specified then all visible channels are listed.
+ * @brief Pings <server> with the specified <cookie>. If <server> is not specified then it defaults to the local server.
  *
- * @return true
- * @return false
- */
-bool ircController::list(std::string patterns) {
-    if (!patterns.size()) return false;
-
-    std::string msg = "LIST ";
-    for (auto it = patterns.begin(); it != patterns.end(); it++) {
-        if (it != patterns.begin()) msg += " ";
-        msg += (*it);
-    }
-    sendMessage(msg);
-    return true;
-}
-
-/**
- * @brief Loads the specified module on the local server.
- * This command is only usable by server operators with LOADMODULE in one of their <class> blocks.
- *
- * @param module
- * @return true
- * @return false
- */
-bool ircController::loadModule(std::string module) {
-    if (module == "") return false;
-    sendMessage("LOADMODULE " + module);
-    return true;
-}
-
-/**
- * @brief Changes the modes which are set on a channel or a user.
- * For a list of modes see the channel modes and user modes pages.
- *
- * @param target channel or user
- * @param modes
- * @param params
- * @return true
- * @return false
- */
-/// MODE <channel>|<user> <modes> [<parameters>]+
-bool ircController::mode(std::string target, std::string modes, std::vector<std::string> params) {
-    if (target == "" || modes == "") return false;
-
-    std::string msg = "MODE " + target + " " + modes + " ";
-    for (auto it = params.begin(); it != params.end(); it++) {
-        if (it != params.begin()) msg += " ";
-        msg += (*it);
-    }
-    sendMessage(msg);
-    return true;
-}
-
-/**
- * @brief Lists all modules which are loaded on the local server.
- */
-bool ircController::modules() {
-    sendMessage("MODULES");
-    return true;
-}
-
-/**
- * @brief If <server> is specified then requests the message of the day for the specified server.
- * Otherwise, requests the message of the day for the local server.
- *
+ * @param cookie
  * @param server
+ * @return true
+ * @return false
  */
-bool ircController::motd(std::string server) {
-    std::string msg = (server == "") ? "MOTD" : "MOTD " + server;
+bool ircController::ping(std::string cookie, std::string server) {
+    if (!cookie.size()) return false;
+    std::string msg = (!server.size()) ? "PING " + cookie : "PING " + cookie + " " + server;
     sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief PONG to keep connection alive
+ *
+ * @param daemon server
+ */
+void ircController::pong(std::string daemon) {
+    std::string msg = "PONG " + daemon;
+    sendMessage(msg);
+}
+
+/**
+ * @brief sends message to all connected channels
+ *
+ * @param text
+ */
+void ircController::privmsg(std::string text) {
+    std::string msg = "PRIVMSG ";
+    for (auto it = channels.begin(); it != channels.end(); it++) {
+        if (it != channels.begin()) msg += ",";
+        msg += (*it);
+    }
+    msg += " :" + text;
+    sendMessage(msg);
+}
+
+/**
+ * @brief If <duration> and <reason> are specified then prevents a nickname from being used. The <duration> may be specified as a number of seconds or as a duration in the format 1y2w3d4h5m6s.
+ * If the duration is zero then the Q-line will be permanent.
+ * Otherwise, if just <nick> is specified, removes a reservation on a nickname.
+ * This command is only usable by server operators with QLINE in one of their <class> blocks.
+ *
+ * @param nicks <nick>[,<nick>]+
+ * @param duration duration
+ * @param reason reason
+ * @return true
+ * @return false if nicks is empty or duration is given without a reason or vice versa
+ */
+bool ircController::qline(std::vector<std::string> nicks, std::string duration, std::string reason) {
+    if (!nicks.size() || (duration != reason && (duration != "" || reason != ""))) return false;
+    std::string msg = "QLINE ";
+    for (auto it = nicks.begin(); it != nicks.end(); it++) {
+        if (it != nicks.begin()) msg += ",";
+        msg += (*it);
+    }
+    if (duration != "")
+        msg += " " + duration + " " + reason;
+
+    sendMessage(msg);
+
     return true;
 }
 
@@ -498,75 +619,287 @@ bool ircController::motd(std::string server) {
  *
  * @param msg
  */
-bool ircController::quit(std::string msg) {
+void ircController::quit(std::string msg) {
     msg = (msg != "") ? "QUIT :" + msg : "QUIT";
     sendMessage(msg);
-    return true;
 }
 
 /**
- * @brief Requests information about the current and total number of servers, server operators, and users.
+ * @brief Reloads the server configuration.
+ * If <type> is specified then a specific module is rehashed on the local server.
+ * If <server> is specified then the specified server's configuration is reloaded.
+ * Otherwise, if no parameters are specified, the local server's configuration is reloaded.
+ * This command is only usable by server operators with REHASH in one of their <class> blocks.
  *
- */
-bool ircController::lusers() {
-    sendMessage("LUSERS");
-    return true;
-}
-
-/**
- * @brief asks server for list of nicknames on given channel array
- *
- * @param chans
- */
-bool ircController::names(std::vector<std::string> chans) {
-    std::string msg = "NAMES ";
-
-    for (auto it = chans.begin(); it != chans.end(); it++) {
-        if (it != chans.begin()) msg += ",";
-        msg += (*it);
-    }
-    sendMessage(msg);
-    return true;
-}
-
-/**
- * @brief Changes your nickname to <nick>.
- * You may also change your nick to your UUID by specifying a nickname of "0".
- *
- * @param nickname
+ * @param serverORtype
  * @return true
  * @return false
  */
-bool ircController::nick(std::string nickname) {
-    if (nickname == "") return false;
-    std::string msg = "NICK " + nickname;
+bool ircController::rehash(std::string serverORtype) {
+    if (!serverORtype.size()) return false;
+    sendMessage(serverORtype);
+    return true;
+}
+
+/**
+ * @brief Reloads the specified module on the local server.
+ * This command is only usable by server operators with RELOADMODULE in one of their <class> blocks.
+ *
+ * @param module
+ * @return true
+ * @return false
+ */
+bool ircController::reloadmodule(std::string module) {
+    if (!module.size()) return false;
+    std::string msg = "RELOADMOUDLE " + module;
     sendMessage(msg);
     return true;
 }
+
 /**
- * @brief Sends a notice to the targets specified in <target>.
- * These targets can be a channel, a user, or a server mask (requires the users/mass-message server operator privilege).
+ * @brief Restarts the local server. The <server> parameter MUST match the name of the local server.
+ * This command is only usable by server operators with RESTART in one of their <class> blocks.
  *
- * @param targets
+ * @param server e.g. irc2.example.com
+ * @return true
+ * @return false
+ */
+bool ircController::restart(std::string server) {
+    if (!server.size()) return false;
+    std::string msg = "RESTART " + server;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief List network services that are currently connected to the network and visible to you.
+ * The optional glob-based nick and oper-type parameters match against the nickname of the network service and the oper type of the network service.
+ *
+ * @param nick
+ * @param operType
+ * @return true
+ * @return false
+ */
+bool ircController::servlist(std::string nick, std::string operType) {
+    if (!nick.size() && operType.size()) return false;
+    std::string msg = "SERVLIST";
+    if (nick != "") msg += " " + nick;
+    if (operType != "") operType += " " + operType;
+    return true;
+}
+
+/**
+ * @brief Sends a message to the service specified in <target>. This target must be on a U-lined server.
+ *
+ * @param target
  * @param message
  * @return true
  * @return false
  */
-bool ircController::notice(std::vector<std::string> targets, std::string message) {
-    if (!targets.size() || message == "") return false;
-    std::string msg = "NOTICE ";
-    for (auto it = targets.begin(); it != targets.end(); it++) {
-        if (it != targets.begin()) msg += ",";
-        msg += (*it);
-    }
-    msg += " " + message;
+bool ircController::squery(std::string target, std::string message) {
+    if (!target.size() || !message.size()) return false;
+    std::string msg = "SQUERY " + target + " " + message;
     sendMessage(msg);
     return true;
 }
 
-bool ircController::oper(std::string name, std::string password) {
-    if (name == "" || password == "") return false;
-    std::string msg = "OPER " + name + " " + password;
+/**
+ * @brief Requests the specified server statistics.
+ * If <server> is specified then requests the server statistics for the specified server.
+ * Otherwise, requests the server statistics for the local server.
+ *
+ * @param character single character
+ * @param server [optional] server to request
+ * @return true
+ * @return false
+ */
+bool ircController::stats(std::string character, std::string server) {
+    if (character.size() != 1) return false;
+    std::string msg = (server.size() == 0) ? "STATS " + character : "STATS " + character + " " + server;
     sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief If <server> is specified then requests the time on the specified server.
+ * Otherwise, requests the time on the local server.
+ *
+ * @param server
+ * @return true
+ * @return false
+ */
+bool ircController::time(std::string server) {
+    std::string msg = (server.size() == 0) ? "TIME" : "TIME " + server;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief If <newtopic> is specified then changes the topic for <channel> to the specified value.
+ * Otherwise, requests the topic for the specified channel.
+ *
+ * @param channel
+ * @param newTopic
+ * @return true
+ * @return false
+ */
+bool ircController::topic(std::string channel, std::string newTopic) {
+    if (!channel.size()) return false;
+    std::string msg = (newTopic.size() == 0) ? "TOPIC " + channel : "TOPIC " + channel + " " + newTopic;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Unloads the specified module on the local server.
+ * This command is only usable by server operators with UNLOADMODULE in one of their <class> blocks.
+ *
+ * @param module
+ * @return true
+ * @return false
+ */
+bool ircController::unloadmodule(std::string module) {
+    if (!module.size()) return false;
+    std::string msg = "UNLOADMODULE " + module;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Specifies a username (ident) and real name (gecos) when connecting to the server.
+ *
+ * @param username
+ * @param hostname
+ * @param servername
+ * @param realname
+ * @return true
+ * @return false
+ */
+bool ircController::user(std::string username, std::string hostname, std::string servername, std::string realname) {
+    std::string msg = "USER " + username + " " + hostname + " " + servername + " " + realname;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief If <server> is specified then requests the version of the specified server.
+ * Otherwise, requests the version of the local serve
+ *
+ * @param nicks
+ * @return true
+ * @return false
+ */
+bool ircController::userhost(std::vector<std::string> nicks) {
+    if (!nicks.size()) return true;
+    std::string msg = "USERHOST ";
+    for (auto it = nicks.begin(); it != nicks.end(); it++) {
+        if (it != nicks.begin()) msg += " ";
+        msg += (*it);
+    }
+    sendMessage(msg);
+    return false;
+}
+
+/**
+ * @brief Requests the hostname of the specified users.
+ *
+ * @param server
+ * @return true
+ * @return false
+ */
+bool version(std::string server) {
+    std::string msg = (!server.size()) ? "VERSION" : "VERSION" + server;
+    return true;
+}
+
+/**
+ * @brief Sends a message to all users with user mode w (wallops) enabled:
+ * This command is only usable by server operators with WALLOPS in one of their <class> blocks.
+ *
+ * @param message
+ * @return true
+ * @return false
+ */
+bool ircController::wallops(std::string message) {
+    if (!message.size()) return false;
+    std::string msg = "WALLOPS " + message;
+    sendMessage(msg);
+    return true;
+}
+
+/**
+ * @brief Requests information about users who match the specified condition.
+ * One or more of the following flags may be used:
+ *
+ * @param pattern_s
+ * @param flags
+ * @param fields
+ * @param queryType
+ * @param pattern_e
+ * @return true
+ * @return false
+ */
+bool ircController::who(std::string pattern_s, std::string flags, std::string fields, std::string queryType, std::string pattern_e) {
+    if ((!pattern_s.size() || !pattern_e.size()) ||
+        !fields.size() && queryType.size())
+        return false;
+
+    std::string msg = "WHO " + pattern_s;
+    msg = (flags.size()) ? msg + " " + flags : msg;
+    msg = (fields.size()) ? msg + "%" + fields : msg;
+    msg = (queryType.size()) ? msg + "," + queryType : msg;
+    msg += pattern_e;
+
+    sendMessage(msg);
+    return true;
+}
+/**
+ * @briefRequests information about users who are currently connected with the specified nicks:
+ * If the <server> parameter is specified then only one <nick> can be specified and remote information
+ * will be fetched about the user if they are not on the local server.
+ *
+ * @param server
+ * @param nicks
+ * @return true
+ * @return false
+ */
+bool ircController::whois(std::string server, std::vector<std::string> nicks) {
+    if (!nicks.size()) return false;
+
+    std::string msg = (server.size()) ? "WHOIS " + server : "WHO";
+    for (auto it = nicks.begin(); it != nicks.end(); it++) {
+        if (it != nicks.begin()) msg += ",";
+        msg += (*it);
+    }
+
+    return true;
+}
+
+/**
+ * @brief Requests information about a user who was previously connected with the specified nick.
+ * If is given, only return the most recent entries.
+ *
+ * @param nick
+ * @param count
+ * @return true
+ * @return false
+ */
+bool ircController::whowas(std::string nick, std::string count) {
+    if (!nick.size()) return false;
+    std::string msg = (count.size()) ? "WHOWAS " + nick + " " + count : "WHOWAS " + nick;
+}
+
+bool ircController::zline(std::vector<std::string> ipaddr, std::string duration, std::string reason) {
+    if (!ipaddr.size() || (duration != reason && (duration != "" || reason != ""))) return false;
+    std::string msg = "ZLINE ";
+    for (auto it = ipaddr.begin(); it != ipaddr.end(); it++) {
+        if (it != ipaddr.begin()) msg += ",";
+        msg += (*it);
+    }
+    if (duration != "")
+        msg += " " + duration + " " + reason;
+
+    sendMessage(msg);
+
     return true;
 }
