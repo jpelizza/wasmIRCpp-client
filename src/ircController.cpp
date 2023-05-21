@@ -67,6 +67,17 @@ void ircController::categorizeMsg(std::string msg) {
 }
 
 /**
+ * @brief Shuts down the local server. The <server> parameter MUST match the name of the local server.
+ *        This command is only usable by server operators with DIE in one of their <class> blocks.
+ *
+ * @param server
+ */
+void ircController::die(std::string server) {
+    std::string msg = "DIE " + server;
+    sendMessage(msg);
+}
+
+/**
  * @brief sends raw message to server
  * @note exported
  * @param msg
@@ -807,7 +818,7 @@ bool ircController::userhost(std::vector<std::string> nicks) {
  * @return true
  * @return false
  */
-bool version(std::string server) {
+bool ircController::version(std::string server) {
     std::string msg = (!server.size()) ? "VERSION" : "VERSION" + server;
     return true;
 }
